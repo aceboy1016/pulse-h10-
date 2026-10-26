@@ -1,0 +1,7 @@
+# 顧客データ・バックアップ・出力ファイルはリポジトリに含めない
+pulse-backup-*.json
+pulse-*.csv
+*.csv
+backup*.json
+.DS_Store
+node_modules/

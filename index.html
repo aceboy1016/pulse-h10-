@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0e0f10">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; font-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>PULSE</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230e0f10'/%3E%3Cpath d='M4 17h6l3-7 5 13 3-6h7' fill='none' stroke='%23c8f04a' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">PULSE</div>
+  <nav class="tabs" role="tablist" aria-label="画面">
+    <button class="tab" role="tab" data-view="pre">運動前</button>
+    <button class="tab" role="tab" data-view="exercise">運動中</button>
+    <button class="tab" role="tab" data-view="recovery">回復</button>
+    <button class="tab" role="tab" data-view="results">結果</button>
+  </nav>
+  <div class="conn">
+    <span class="who" id="whoLabel">顧客未選択</span>
+    <span class="pill" id="connPill" data-state="idle"><i></i><span id="connText">未接続</span></span>
+    <button class="btn primary" id="btnConnect">H10に接続</button>
+    <button class="btn ghost" id="btnDemo" title="実測ではない模擬信号で動作を確認します">デモ</button>
+  </div>
+</header>
+
+<div class="banner" id="supportBanner" hidden></div>
+<div class="banner warn" id="msgBanner" hidden></div>
+
+<main>
+  <!-- 運動前 -->
+  <section class="view" id="view-pre" data-view="pre">
+    <div class="grid two">
+      <div class="panel">
+        <h2>顧客</h2>
+        <div class="row">
+          <select id="customerSelect" aria-label="顧客を選択"></select>
+          <button class="btn" id="btnNewCustomer">新規</button>
+        </div>
+        <form id="customerForm" class="form" autocomplete="off" hidden>
+          <label>氏名<input type="text" id="cName" maxlength="80" required></label>
+          <div class="row">
+            <label>年齢<input type="number" id="cAge" min="5" max="110" step="1" inputmode="numeric"></label>
+            <label>普段の安静時心拍<input type="number" id="cResting" min="20" max="200" step="1" inputmode="numeric" placeholder="bpm"></label>
+          </div>
+          <div class="row">
+            <label>測定済み最大心拍<input type="number" id="cMaxMeasured" min="80" max="260" step="1" inputmode="numeric" placeholder="bpm"></label>
+            <label class="check"><input type="checkbox" id="cUseMeasured">推定より優先する</label>
+          </div>
+          <label>メモ<textarea id="cMemo" rows="3" maxlength="2000"></textarea></label>
+          <label class="check"><input type="checkbox" id="cIsDemo">デモ用の顧客（実在の顧客ではない）</label>
+          <div class="row end">
+            <button type="button" class="btn danger ghost" id="btnDeleteCustomer">削除</button>
+            <span class="spacer"></span>
+            <button type="button" class="btn ghost" id="btnCancelCustomer">閉じる</button>
+            <button type="submit" class="btn primary">保存</button>
+          </div>
+        </form>
+        <dl class="facts" id="customerFacts"></dl>
+        <button class="btn ghost small" id="btnEditCustomer" hidden>編集</button>
+      </div>
+
+      <div class="panel">
+        <h2>今日の運動前心拍</h2>
+        <div class="mid-hr"><span class="num" id="preLive">--</span><span class="unit">bpm</span></div>
+        <p class="muted" id="preStability">座るなど落ち着いた状態で、数値が安定してから登録してください。</p>
+        <div class="row">
+          <button class="btn" id="btnRegisterPre">現在値を登録</button>
+          <span class="muted" id="preRegistered"></span>
+        </div>
+        <p class="note">「普段の安静時心拍」（顧客情報）とは別に、その日の運動前の状態として記録します。</p>
+        <hr>
+        <div class="row">
+          <button class="btn primary big" id="btnStartSession">運動を開始</button>
+        </div>
+        <p class="muted" id="startHint"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 運動中 -->
+  <section class="view" id="view-exercise" data-view="exercise">
+    <div class="live">
+      <div class="live-main">
+        <div class="ring-wrap">
+          <svg class="ring" viewBox="0 0 200 200" aria-hidden="true">
+            <circle class="ring-track" cx="100" cy="100" r="92"></circle>
+            <circle class="ring-bar" id="exRing" cx="100" cy="100" r="92" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"></circle>
+          </svg>
+          <div class="ring-center">
+            <div class="huge"><span class="num" id="exHr">--</span></div>
+            <div class="unit-line"><span class="unit">bpm</span><span class="pct" id="exPct"></span></div>
+          </div>
+        </div>
+        <div class="live-side">
+          <div class="zone-label" id="exZoneLabel">--</div>
+          <p class="zone-summary" id="exZoneSummary">心拍を受信すると強度の目安を表示します。</p>
+          <p class="zone-talk" id="exZoneTalk"></p>
+          <div class="figure-row">
+            <svg class="figure" id="exFigure" viewBox="0 0 120 80" aria-hidden="true"></svg>
+            <p class="zone-example" id="exZoneExample"></p>
+          </div>
+          <p class="muted small" id="exMaxInfo"></p>
+        </div>
+      </div>
+      <div class="panel chart-panel">
+        <div class="panel-head"><h3>心拍推移</h3><span class="muted small">直近3分</span></div>
+        <canvas class="chart" id="exChart"></canvas>
+      </div>
+      <div class="stats" id="exStats">
+        <div><span class="k">平均</span><span class="v" id="stAvg">--</span></div>
+        <div><span class="k">最大</span><span class="v" id="stMax">--</span></div>
+        <div><span class="k">最小</span><span class="v" id="stMin">--</span></div>
+        <div><span class="k">計測時間</span><span class="v" id="stTime">--</span></div>
+      </div>
+      <div class="row actions">
+        <button class="btn mint big" id="btnStartRecovery">セット終了・回復を測る</button>
+        <span class="spacer"></span>
+        <button class="btn ghost" id="btnEndSession">セッション終了</button>
+        <button class="btn ghost danger" id="btnDiscardSession">破棄</button>
+      </div>
+      <p class="muted" id="exSessionInfo"></p>
+      <details class="explain">
+        <summary>強度の目安について</summary>
+        <ul>
+          <li>強度区分はACSM（米国スポーツ医学会）の最大心拍に対する割合（%HRmax）による分類です。乳酸閾値・換気閾値などの生理学的な境界ではありません。</li>
+          <li>推定最大心拍（208 − 0.7 × 年齢）は個人差が大きく、上回っても異常とは限りません。</li>
+          <li>心拍だけでは「無酸素状態」「脂肪が主燃料」などは判断できません。</li>
+          <li>運動例は同じ強度の感じ方の参考で、同じ運動量・消費カロリーという意味ではありません。</li>
+        </ul>
+      </details>
+    </div>
+  </section>
+
+  <!-- 回復 -->
+  <section class="view recovery" id="view-recovery" data-view="recovery">
+    <div class="rec-top">
+      <div class="ring-wrap small-ring">
+        <svg class="ring" viewBox="0 0 200 200" aria-hidden="true">
+          <circle class="ring-track" cx="100" cy="100" r="92"></circle>
+          <circle class="ring-bar mint" id="recRing" cx="100" cy="100" r="92" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"></circle>
+        </svg>
+        <div class="ring-center">
+          <div class="huge mid"><span class="num" id="recHr">--</span></div>
+          <div class="unit-line"><span class="unit">bpm</span><span class="pct" id="recElapsed">0秒</span></div>
+        </div>
+      </div>
+      <div class="rec-side">
+        <div class="rec-headline" id="recHeadline">回復計測は「運動中」の「セット終了・回復を測る」から始めます。</div>
+        <div class="rec-sub" id="recSub"></div>
+        <div class="rec-points">
+          <div><span class="k">30秒</span><span class="v" id="rp30">--</span></div>
+          <div><span class="k">60秒</span><span class="v" id="rp60">--</span></div>
+          <div><span class="k">120秒</span><span class="v" id="rp120">--</span></div>
+        </div>
+        <div class="rec-sub" id="recPre"></div>
+        <div class="rec-compare" id="recCompare"></div>
+      </div>
+    </div>
+    <div class="grid two">
+      <div class="panel chart-panel">
+        <div class="panel-head"><h3>回復開始からの心拍</h3><span class="muted small">0〜120秒</span></div>
+        <canvas class="chart" id="recChart"></canvas>
+      </div>
+      <form class="panel form" id="recForm" autocomplete="off">
+        <h3>条件</h3>
+        <fieldset class="seg" id="recMethod">
+          <legend>回復方法</legend>
+          <label><input type="radio" name="method" value="sitting"><span>座位</span></label>
+          <label><input type="radio" name="method" value="standing"><span>立位</span></label>
+          <label><input type="radio" name="method" value="walking"><span>ゆっくり歩く</span></label>
+        </fieldset>
+        <label>種目<input type="text" id="rExercise" maxlength="80" placeholder="例：スクワット"></label>
+        <div class="row">
+          <label>重量 kg<input type="number" id="rWeight" min="0" max="1000" step="0.5" inputmode="decimal"></label>
+          <label>回数<input type="number" id="rReps" min="0" max="1000" step="1" inputmode="numeric"></label>
+        </div>
+        <label>メモ<input type="text" id="rNote" maxlength="500"></label>
+      </form>
+    </div>
+    <div class="row actions">
+      <button class="btn mint big" id="btnFinishRecovery">記録して終了</button>
+      <span class="spacer"></span>
+      <button class="btn ghost danger" id="btnCancelRecovery">記録せず戻る</button>
+    </div>
+    <details class="explain">
+      <summary>回復の値について</summary>
+      <ul>
+        <li>開始時心拍は、ボタンを押す前2秒以内の実測値です。30・60・120秒値は、その時刻の前後2秒以内で最も近い実測値を使います。</li>
+        <li>その範囲に実測がない場合は「測定不足」、途中で5秒以上の欠測・切断・センサー接触なしがあれば「欠測あり」とし、比較には使いません。</li>
+        <li>比較は同じ顧客・同じ回復方法・同じ種目で行います。重量と回数まで一致した場合のみ「同条件」と表示します。デモと実測は比較しません。</li>
+        <li>心拍の低下は心拍の回復であり、筋肉の回復・乳酸の除去・次のセットが可能かどうかを示すものではありません。</li>
+      </ul>
+    </details>
+  </section>
+
+  <!-- 結果 -->
+  <section class="view" id="view-results" data-view="results">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>セッション</h2>
+        <select id="sessionSelect" aria-label="セッションを選択"></select>
+      </div>
+      <div id="resultEmpty" class="muted">この顧客のセッションはまだありません。</div>
+      <div id="resultBody">
+        <p class="muted" id="resultMeta"></p>
+        <canvas class="chart tall" id="resChart"></canvas>
+        <div class="stats" id="resStats">
+          <div><span class="k">平均</span><span class="v" id="rsAvg">--</span></div>
+          <div><span class="k">最大</span><span class="v" id="rsMax">--</span></div>
+          <div><span class="k">最小</span><span class="v" id="rsMin">--</span></div>
+          <div><span class="k">計測時間</span><span class="v" id="rsTime">--</span></div>
+        </div>
+        <h3>回復記録</h3>
+        <div class="table-wrap"><table id="recTable"></table></div>
+        <div class="row">
+          <button class="btn" id="btnCsvSession">このセッションのCSV</button>
+          <button class="btn ghost danger" id="btnDeleteSession">このセッションを削除</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>履歴</h2>
+      <div class="table-wrap"><table id="historyTable"></table></div>
+      <div class="row">
+        <button class="btn" id="btnCsvSamples">全履歴の心拍CSV</button>
+        <button class="btn" id="btnCsvRecoveries">全履歴の回復CSV</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>データ管理</h2>
+      <p class="muted">データはこのブラウザ内（IndexedDB）にのみ保存され、外部には送信されません。別の端末・ブラウザでは見えないため、定期的にバックアップを保存してください。</p>
+      <div class="row">
+        <button class="btn" id="btnBackup">JSONバックアップを保存</button>
+        <label class="btn file">JSONから復元<input type="file" id="restoreFile" accept="application/json,.json"></label>
+      </div>
+      <p class="note">復元は既存データを消さずに追加します（同じIDのデータはスキップ）。旧サイトのバックアップ（pulse-v2）も読み込みを試みます。</p>
+      <p class="muted small" id="storageInfo"></p>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <svg class="check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+  <span id="toastText"></span>
+</div>
+
+<dialog id="dialog">
+  <form method="dialog">
+    <h3 id="dlgTitle"></h3>
+    <p id="dlgBody"></p>
+    <div class="row end" id="dlgButtons"></div>
+  </form>
+</dialog>
+
+<script src="js/physio.js"></script>
+<script src="js/db.js"></script>
+<script src="js/ble.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/backup.js"></script>
+<script src="js/figures.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
